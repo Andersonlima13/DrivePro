@@ -7,14 +7,14 @@ import (
 	"drivepro/internal/storage/model"
 )
 
-func TestServiceFolderPathAndDirectoryListing(t *testing.T) {
-	service, fileRepo := newTestService()
+func TestFolderServicePathAndDirectoryListing(t *testing.T) {
+	folderService, fileService, fileRepo := newTestServices()
 
-	if err := service.CreateFolderByPath("/docs/projects"); err != nil {
+	if err := folderService.CreateFolderByPath("/docs/projects"); err != nil {
 		t.Fatalf("CreateFolderByPath() error = %v", err)
 	}
 
-	root, err := service.GetFolderByPath("/")
+	root, err := folderService.GetFolderByPath("/")
 	if err != nil {
 		t.Fatalf("GetFolderByPath(\"/\") error = %v", err)
 	}
@@ -22,12 +22,12 @@ func TestServiceFolderPathAndDirectoryListing(t *testing.T) {
 		t.Fatalf("root folder = %#v, want virtual root", root)
 	}
 
-	docs, err := service.GetFolderByPath("/docs")
+	docs, err := folderService.GetFolderByPath("/docs")
 	if err != nil {
 		t.Fatalf("GetFolderByPath(\"/docs\") error = %v", err)
 	}
 
-	projects, err := service.GetFolderByPath("\\docs\\projects")
+	projects, err := folderService.GetFolderByPath("\\docs\\projects")
 	if err != nil {
 		t.Fatalf("GetFolderByPath(\"\\\\docs\\\\projects\") error = %v", err)
 	}
@@ -43,31 +43,39 @@ func TestServiceFolderPathAndDirectoryListing(t *testing.T) {
 		FolderID: docs.ID,
 	})
 
-	dir, err := service.ListDirectory(&docs.ID)
+	// Test listing folders in docs directory
+	folders, err := folderService.ListFolders(&docs.ID)
 	if err != nil {
-		t.Fatalf("ListDirectory() error = %v", err)
+		t.Fatalf("ListFolders() error = %v", err)
 	}
-	if len(dir.Folders) != 1 || dir.Folders[0].Name != "projects" {
-		t.Fatalf("folders = %#v, want projects folder", dir.Folders)
-	}
-	if len(dir.Files) != 1 || dir.Files[0].Name != "notes.txt" {
-		t.Fatalf("files = %#v, want notes.txt file", dir.Files)
+	if len(folders) != 1 || folders[0].Name != "projects" {
+		t.Fatalf("folders = %#v, want projects folder", folders)
 	}
 
-	rootDir, err := service.ListDirectory(nil)
+	// Test listing files in docs directory
+	files, err := fileService.ListFiles(docs.ID)
 	if err != nil {
-		t.Fatalf("ListDirectory(nil) error = %v", err)
+		t.Fatalf("ListFiles() error = %v", err)
 	}
-	if len(rootDir.Folders) != 1 || rootDir.Folders[0].Name != "docs" {
-		t.Fatalf("root folders = %#v, want docs folder", rootDir.Folders)
+	if len(files) != 1 || files[0].Name != "notes.txt" {
+		t.Fatalf("files = %#v, want notes.txt file", files)
+	}
+
+	// Test listing folders in root directory
+	rootFolders, err := folderService.ListFolders(nil)
+	if err != nil {
+		t.Fatalf("ListFolders(nil) error = %v", err)
+	}
+	if len(rootFolders) != 1 || rootFolders[0].Name != "docs" {
+		t.Fatalf("root folders = %#v, want docs folder", rootFolders)
 	}
 }
 
-func newTestService() (*Service, *fakeFileRepository) {
+func newTestServices() (*FolderService, *FileService, *fakeFileRepository) {
 	fileRepo := &fakeFileRepository{}
 	folderRepo := &fakeFolderRepository{}
 
-	return NewService(fileRepo, folderRepo), fileRepo
+	return NewFolderService(folderRepo), NewFileService(fileRepo), fileRepo
 }
 
 type fakeFileRepository struct {
